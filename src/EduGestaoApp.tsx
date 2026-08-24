@@ -503,8 +503,8 @@ export default function EduGestaoApp() {
 
       {/* Main Content */}
       <main className="flex-1 md:ml-[280px] min-h-screen flex flex-col">
-        <header className="h-24 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-6">
+        <header className="h-20 sm:h-24 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-30">
+          <div className="flex items-center gap-3 sm:gap-6">
             <button className="md:hidden p-3 hover:bg-gray-100 rounded-2xl transition-colors" onClick={() => setIsSidebarOpen(true)}>
               <Menu size={24} className="text-[#1a2f4e]" />
             </button>
@@ -513,7 +513,7 @@ export default function EduGestaoApp() {
               <input type="text" placeholder="Pesquisar em toda a plataforma..." className="w-full bg-gray-50 border-none rounded-2xl pl-12 pr-6 py-3.5 text-sm focus:ring-2 focus:ring-[#1a2f4e]/20 outline-none transition-all placeholder:text-gray-300" />
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             <div className="flex items-center gap-2">
               <button className="p-3 text-gray-400 hover:text-[#1a2f4e] hover:bg-[#1a2f4e]/5 rounded-2xl transition-all relative">
                 <Bell size={22} />
@@ -524,7 +524,7 @@ export default function EduGestaoApp() {
               </button>
             </div>
             
-            <div className="flex items-center gap-4 pl-6 border-l border-gray-100">
+            <div className="flex items-center gap-2 sm:gap-4 pl-3 sm:pl-6 border-l border-gray-100">
               <div className="text-right hidden sm:block">
                 <p className="text-[15px] font-black text-[#1a2f4e]">Nataly Wingerter</p>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Diretora Administrativa</p>
@@ -534,7 +534,7 @@ export default function EduGestaoApp() {
           </div>
         </header>
 
-        <div className="flex-1 p-8 md:p-12 max-w-[1600px] mx-auto w-full">
+        <div className="flex-1 p-4 sm:p-8 md:p-12 max-w-[1600px] mx-auto w-full">
           {renderContent()}
         </div>
       </main>
@@ -807,7 +807,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
 
       {isViewing && selectedStudent && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[25px] w-full max-w-4xl max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl scale-in-center">
+          <div className="bg-white rounded-[25px] w-full max-w-4xl max-h-[90vh] overflow-y-auto p-5 sm:p-8 relative shadow-2xl scale-in-center">
             <button 
               onClick={() => setIsViewing(false)}
               className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -841,7 +841,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
               <div className="flex-1 space-y-8">
                 <div>
                   <h4 className="text-lg font-bold mb-4 flex items-center gap-2 border-l-4 border-[#1a2f4e] pl-3">Dados Pessoais</h4>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-gray-400 font-bold uppercase">Nascimento</p>
                       <p className="font-medium">{selectedStudent.birthDate ? new Date(selectedStudent.birthDate).toLocaleDateString('pt-BR') : 'Não informado'}</p>
@@ -867,7 +867,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
 
                 <div>
                   <h4 className="text-lg font-bold mb-4 flex items-center gap-2 border-l-4 border-[#ef9f2f] pl-3">Saúde e Emergência</h4>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-gray-400 font-bold uppercase">Contato de Emergência</p>
                       <p className="font-medium">{selectedStudent.emergencyName}</p>
@@ -973,7 +973,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
                 {selectedStudent.pickups && selectedStudent.pickups.length > 0 && (
                   <div>
                     <h4 className="text-lg font-bold mb-4 flex items-center gap-2 border-l-4 border-pink-400 pl-3">Autorizados para Retirada</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {selectedStudent.pickups.map(p => (
                         <div key={p.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
                           <div className="w-10 h-10 rounded-full bg-gray-200" />
@@ -1178,7 +1178,7 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
                 <p className="text-xs text-gray-500 font-medium line-clamp-1 italic">{emp.qualifications}</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
                     <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Treinamento</span>
@@ -1205,7 +1205,7 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
 
       {isViewing && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-[40px] w-full max-w-3xl max-h-[90vh] overflow-y-auto p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <button onClick={() => setIsViewing(false)} className="absolute right-8 top-8 p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X size={24} />
             </button>
@@ -1242,7 +1242,7 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
                     <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">Qualificações Acadêmicas</p>
                     <p className="text-[15px] font-bold text-gray-700 leading-relaxed italic">"{selectedEmployee.qualifications}"</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-6 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                     <div>
                       <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest mb-1">PIS/PASEP</p>
                       <p className="text-sm font-bold text-gray-700">{selectedEmployee.pis}</p>
@@ -2154,7 +2154,7 @@ function AcademicModule({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <button 
                     onClick={() => { setSelectedStudentId(s.id); setIsViewingHistory(true); }}
                     className="flex-1 py-4 text-xs font-black border border-gray-100 rounded-[20px] hover:bg-gray-50 transition-all flex items-center justify-center gap-2 text-gray-500"
@@ -2191,7 +2191,7 @@ function AcademicModule({
       {/* Modal Adicionar Progresso */}
       {isAddingProgress && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[25px] w-full max-w-lg p-8 relative shadow-2xl scale-in-center">
+          <div className="bg-white rounded-[25px] w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 sm:p-8 relative shadow-2xl scale-in-center">
             <button onClick={() => setIsAddingProgress(false)} className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X size={24} />
             </button>
@@ -2360,13 +2360,13 @@ function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Stud
 
       {isAdding && (
         <div className="fixed inset-0 bg-[#0e1a2b]/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] w-full max-w-2xl p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <button onClick={() => setIsAdding(false)} className="absolute right-8 top-8 p-3 hover:bg-gray-100 rounded-full transition-all group">
               <X size={24} className="text-gray-400 group-hover:text-[#0e1a2b]" />
             </button>
             <h3 className="text-2xl font-black text-[#0e1a2b] mb-8">Agendar Nova Reunião</h3>
             <form onSubmit={handleSave} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-600">Data</label>
                   <input required type="date" className="w-full p-4 rounded-[20px] border border-gray-100 bg-gray-50/50 outline-none focus:ring-4 focus:ring-[#1a2f4e]/10 transition-all text-[15px]" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
@@ -2396,7 +2396,7 @@ function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Stud
 
       {viewingPauta !== null && (
         <div className="fixed inset-0 bg-[#0e1a2b]/20 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] w-full max-w-lg p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <button onClick={() => setViewingPauta(null)} className="absolute right-8 top-8 p-3 hover:bg-gray-100 rounded-full transition-all group">
               <X size={24} className="text-gray-400 group-hover:text-[#0e1a2b]" />
             </button>
@@ -2416,7 +2416,7 @@ function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Stud
               
               return (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-4 bg-gray-50 rounded-2xl">
                       <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Data e Hora</p>
                       <p className="font-bold text-[#0e1a2b] text-sm">
@@ -3023,7 +3023,7 @@ function MaterialsModule() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-[40px] w-full max-w-lg p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-10 relative shadow-2xl animate-in fade-in zoom-in-95 duration-300">
             <button onClick={() => setIsModalOpen(false)} className="absolute right-8 top-8 p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X size={24} />
             </button>
