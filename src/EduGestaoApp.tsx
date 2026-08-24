@@ -186,6 +186,8 @@ export default function EduGestaoApp() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [studyProgress, setStudyProgress] = useState<StudyProgress[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savingMessage, setSavingMessage] = useState("Salvando alterações...");
 
 
   // --- Persistence ---
@@ -371,32 +373,73 @@ export default function EduGestaoApp() {
   }, []);
 
 
-  const saveAttendance = (newRecords: AttendanceRecord[]) => {
-    setAttendanceRecords(newRecords);
-    localStorage.setItem("edugestao-attendance-v2", JSON.stringify(newRecords));
+  // --- Block navigation away while a save is in progress ---
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSaving) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isSaving]);
+
+  // --- Persist to storage and only resolve once the write is confirmed ---
+  const persistToStorage = async (key: string, data: unknown, message = "Salvando alterações..."): Promise<boolean> => {
+    setSavingMessage(message);
+    setIsSaving(true);
+    try {
+      const serialized = JSON.stringify(data);
+      localStorage.setItem(key, serialized);
+      // Confirm the write actually landed in storage before releasing the UI
+      const verify = localStorage.getItem(key);
+      if (verify !== serialized) {
+        throw new Error("Não foi possível confirmar a gravação dos dados.");
+      }
+      // Brief settle time so the lock state is visibly communicated to the user
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      return true;
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao salvar. Tente novamente.");
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const saveStudyProgress = (newProgress: StudyProgress[]) => {
-    setStudyProgress(newProgress);
-    localStorage.setItem("edugestao-study-progress-v2", JSON.stringify(newProgress));
+  const saveAttendance = async (newRecords: AttendanceRecord[]) => {
+    const ok = await persistToStorage("edugestao-attendance-v2", newRecords, "Salvando frequência...");
+    if (ok) setAttendanceRecords(newRecords);
+  };
+
+  const saveStudyProgress = async (newProgress: StudyProgress[]) => {
+    const ok = await persistToStorage("edugestao-study-progress-v2", newProgress, "Salvando progresso...");
+    if (ok) setStudyProgress(newProgress);
   };
 
 
-  const saveStudents = (newStudents: Student[]) => {
-    setStudents(newStudents);
-    localStorage.setItem("edugestao-students-v2", JSON.stringify(newStudents));
-    toast.success("Dados dos alunos atualizados com sucesso!");
+  const saveStudents = async (newStudents: Student[]) => {
+    const ok = await persistToStorage("edugestao-students-v2", newStudents, "Salvando dados dos alunos...");
+    if (ok) {
+      setStudents(newStudents);
+      toast.success("Dados dos alunos atualizados com sucesso!");
+    }
   };
 
-  const saveOccurrences = (newOccurrences: Occurrence[]) => {
-    setOccurrences(newOccurrences);
-    localStorage.setItem("edugestao-occurrences-v2", JSON.stringify(newOccurrences));
-    toast.success("Ocorrências atualizadas com sucesso!");
+  const saveOccurrences = async (newOccurrences: Occurrence[]) => {
+    const ok = await persistToStorage("edugestao-occurrences-v2", newOccurrences, "Salvando ocorrências...");
+    if (ok) {
+      setOccurrences(newOccurrences);
+      toast.success("Ocorrências atualizadas com sucesso!");
+    }
   };
 
-  const addStudent = (newStudent: Omit<Student, 'id'>) => {
+  const addStudent = async (newStudent: Omit<Student, 'id'>) => {
     const studentWithId = { ...newStudent, id: Date.now() };
-    saveStudents([...students, studentWithId]);
+    await saveStudents([...students, studentWithId]);
   };
 
   const menuItems = [
@@ -440,19 +483,21 @@ export default function EduGestaoApp() {
       case "attendance":
         return <AttendanceModule students={students} attendanceRecords={attendanceRecords} onSaveAttendance={saveAttendance} />;
       case "meetings":
-        return <MeetingsModule students={students} meetings={meetings} onSaveMeetings={(newMeetings) => {
-          setMeetings(newMeetings);
-          localStorage.setItem("edugestao-meetings-v2", JSON.stringify(newMeetings));
+        return <MeetingsModule students={students} meetings={meetings} onSaveMeetings={async (newMeetings) => {
+          const ok = await persistToStorage("edugestao-meetings-v2", newMeetings, "Salvando reunião...");
+          if (ok) setMeetings(newMeetings);
         }} />;
       case "materials":
         return <MaterialsModule />;
       case "employees":
         return <EmployeesModule 
           employees={employees} 
-          onSave={(newEmps) => {
-            setEmployees(newEmps);
-            localStorage.setItem("edugestao-employees-v2", JSON.stringify(newEmps));
-            toast.success("Dados dos funcionários atualizados!");
+          onSave={async (newEmps) => {
+            const ok = await persistToStorage("edugestao-employees-v2", newEmps, "Salvando funcionários...");
+            if (ok) {
+              setEmployees(newEmps);
+              toast.success("Dados dos funcionários atualizados!");
+            }
           }} 
         />;
       default:
@@ -468,6 +513,22 @@ export default function EduGestaoApp() {
   return (
     <div className="min-h-screen bg-[#f7f8fc] flex text-gray-800 font-sans">
       <Toaster position="bottom-right" />
+
+      {/* Global saving lock overlay — blocks the whole screen until the save is confirmed persisted */}
+      {isSaving && (
+        <div
+          className="fixed inset-0 z-[9999] bg-[#0e1a2b]/60 backdrop-blur-sm flex items-center justify-center"
+          role="alert"
+          aria-live="assertive"
+          onClick={(e) => e.preventDefault()}
+        >
+          <div className="bg-white rounded-[28px] shadow-2xl px-10 py-8 flex flex-col items-center gap-4 max-w-xs mx-4 text-center">
+            <div className="w-12 h-12 rounded-full border-4 border-[#1a2f4e]/15 border-t-[#1a2f4e] animate-spin" />
+            <p className="text-[15px] font-bold text-[#1a2f4e]">{savingMessage}</p>
+            <p className="text-xs text-gray-400">Não feche ou saia desta tela até a confirmação.</p>
+          </div>
+        </div>
+      )}
       
       {/* Sidebar Overlay (Mobile) */}
       {isSidebarOpen && (
@@ -697,7 +758,7 @@ function Dashboard({ students, employees, meetings, setActiveTab }: { students: 
   );
 }
 
-function StudentsModule({ students, onSave }: { students: Student[], onSave: (s: Student[]) => void }) {
+function StudentsModule({ students, onSave }: { students: Student[], onSave: (s: Student[]) => Promise<void> }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isViewing, setIsViewing] = useState(false);
@@ -708,9 +769,9 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
     s.classroom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddStudent = (newStudent: Omit<Student, 'id'>) => {
+  const handleAddStudent = async (newStudent: Omit<Student, 'id'>) => {
     const studentWithId = { ...newStudent, id: Date.now() };
-    onSave([...students, studentWithId]);
+    await onSave([...students, studentWithId]);
     setIsAdding(false);
     toast.success("Aluno cadastrado com sucesso!");
   };
@@ -899,7 +960,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
                           const file = e.target.files?.[0];
                           if (file) {
                             const reader = new FileReader();
-                            reader.onloadend = () => {
+                            reader.onloadend = async () => {
                               const newDoc: StudentDocument = {
                                 id: Date.now().toString(),
                                 name: file.name,
@@ -912,7 +973,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
                                   ? { ...s, documents: [...(s.documents || []), newDoc], documentsComplete: true } 
                                   : s
                               );
-                              onSave(updatedStudents);
+                              await onSave(updatedStudents);
                               setSelectedStudent({ ...selectedStudent, documents: [...(selectedStudent.documents || []), newDoc], documentsComplete: true });
                               toast.success("Documento anexado com sucesso!");
                             };
@@ -996,7 +1057,7 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
 }
 
 
-function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave: (e: Employee[]) => void }) {
+function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave: (e: Employee[]) => Promise<void> }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -1019,10 +1080,10 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
     e.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const newEmp = { ...formData, id: Date.now(), documents: formData.documents || [] } as Employee;
-    onSave([...employees, newEmp]);
+    await onSave([...employees, newEmp]);
     setIsAdding(false);
     setFormData({ name: '', role: '', cpf: '', rg: '', pis: '', address: '', qualifications: '', trainingProgress: 0, attendance: 100, documents: [] });
     toast.success("Funcionário cadastrado com sucesso!");
@@ -1034,7 +1095,7 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
 
     Array.from(files).forEach(file => {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const newDoc: EmployeeDocument = {
           id: Date.now().toString() + Math.random(),
           name: file.name,
@@ -1048,7 +1109,7 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
           const updated = employees.map(emp => 
             emp.id === empId ? { ...emp, documents: [...emp.documents, newDoc] } : emp
           );
-          onSave(updated);
+          await onSave(updated);
           if (selectedEmployee?.id === empId) {
             setSelectedEmployee({ ...selectedEmployee, documents: [...selectedEmployee.documents, newDoc] });
           }
@@ -1305,7 +1366,7 @@ function AttendanceModule({
 }: { 
   students: Student[], 
   attendanceRecords: AttendanceRecord[], 
-  onSaveAttendance: (newRecords: AttendanceRecord[]) => void 
+  onSaveAttendance: (newRecords: AttendanceRecord[]) => Promise<void> 
 }) {
   const [activeSubTab, setActiveSubTab] = useState<'register' | 'query'>('register');
   const [filterClassroom, setFilterClassroom] = useState("");
@@ -1320,12 +1381,12 @@ function AttendanceModule({
     return matchClass && matchName;
   });
 
-  const handleToggleAttendance = (studentId: number) => {
+  const handleToggleAttendance = async (studentId: number) => {
     const today = new Date().toISOString().split('T')[0] || '';
     const existing = attendanceRecords.find(r => r.date === today && r.studentId === studentId);
     
     if (existing) {
-      onSaveAttendance(attendanceRecords.filter(r => r.id !== existing.id));
+      await onSaveAttendance(attendanceRecords.filter(r => r.id !== existing.id));
       toast.info("Registro removido");
     } else {
       const newRecord: AttendanceRecord = {
@@ -1334,7 +1395,7 @@ function AttendanceModule({
         studentId,
         status: 'absent'
       };
-      onSaveAttendance([...attendanceRecords, newRecord]);
+      await onSaveAttendance([...attendanceRecords, newRecord]);
       toast.success("Falta registrada");
     }
   };
@@ -1431,12 +1492,12 @@ function AttendanceModule({
             </div>
             <div className="flex items-end">
                <button 
-                 onClick={() => {
+                 onClick={async () => {
                    const today = new Date().toISOString().split('T')[0];
                    const currentAbsences = attendanceRecords.filter(r => r.date === today);
                    const idsToKeep = attendanceRecords.filter(r => r.date !== today).map(r => r.id);
                    // Basically clear all absences for today
-                   onSaveAttendance(attendanceRecords.filter(r => r.date !== today));
+                   await onSaveAttendance(attendanceRecords.filter(r => r.date !== today));
                    toast.success("Todos os alunos marcados como presentes!");
                  }}
                  className="bg-[#1a2f4e]/5 px-6 py-3 rounded-xl border border-[#1a2f4e]/10 text-sm font-bold text-[#1a2f4e] flex items-center gap-2 hover:bg-[#1a2f4e]/10 transition-colors"
@@ -1721,7 +1782,7 @@ function AttendanceModule({
   );
 }
 
-function AdmissionsModule({ students, onAddStudent }: { students: Student[], onAddStudent: (s: Omit<Student, 'id'>) => void }) {
+function AdmissionsModule({ students, onAddStudent }: { students: Student[], onAddStudent: (s: Omit<Student, 'id'>) => Promise<void> }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<Partial<Student>>({
     name: '',
@@ -1758,7 +1819,7 @@ function AdmissionsModule({ students, onAddStudent }: { students: Student[], onA
       documentsComplete: true 
     };
 
-    onAddStudent(studentToSave as Omit<Student, 'id'>);
+    await onAddStudent(studentToSave as Omit<Student, 'id'>);
     toast.success("Matrícula realizada com sucesso!");
     setStep(1);
   };
@@ -1891,7 +1952,7 @@ function AdmissionsModule({ students, onAddStudent }: { students: Student[], onA
   );
 }
 
-function FinancialModule({ students, onSave }: { students: Student[], onSave: (s: Student[]) => void }) {
+function FinancialModule({ students, onSave }: { students: Student[], onSave: (s: Student[]) => Promise<void> }) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue'>('all');
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -1901,7 +1962,7 @@ function FinancialModule({ students, onSave }: { students: Student[], onSave: (s
     return matchFilter && matchSearch;
   });
 
-  const handleToggleStatus = (studentId: number) => {
+  const handleToggleStatus = async (studentId: number) => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
@@ -1909,7 +1970,7 @@ function FinancialModule({ students, onSave }: { students: Student[], onSave: (s
     const updated = students.map(s => 
       s.id === studentId ? { ...s, financialStatus: newStatus as any } : s
     );
-    onSave(updated);
+    await onSave(updated);
     toast.success(`Status alterado para ${newStatus === 'paid' ? 'Pago' : 'Pendente'}`);
   };
 
@@ -2050,7 +2111,7 @@ function AcademicModule({
   students: Student[], 
   occurrences: Occurrence[],
   studyProgress: StudyProgress[],
-  onSaveProgress: (p: StudyProgress[]) => void,
+  onSaveProgress: (p: StudyProgress[]) => Promise<void>,
   setActiveTab: (tab: string) => void
 }) {
   const [filterClassroom, setFilterClassroom] = useState("");
@@ -2073,7 +2134,7 @@ function AcademicModule({
 
   const classrooms = Array.from(new Set(students.map(s => s.classroom)));
 
-  const handleAddProgress = (e: React.FormEvent) => {
+  const handleAddProgress = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedStudentId === null) return;
 
@@ -2086,14 +2147,14 @@ function AcademicModule({
       recordedBy: "Coordenador(a)"
     };
 
-    onSaveProgress([...studyProgress, newProgress]);
+    await onSaveProgress([...studyProgress, newProgress]);
     setIsAddingProgress(false);
     setProgressData({ progress: 75, description: '' });
     toast.success("Progresso adicionado com sucesso!");
   };
 
-  const handleDeleteProgress = (id: string) => {
-    onSaveProgress(studyProgress.filter(p => p.id !== id));
+  const handleDeleteProgress = async (id: string) => {
+    await onSaveProgress(studyProgress.filter(p => p.id !== id));
     toast.info("Registro de progresso excluído.");
   };
 
@@ -2313,7 +2374,7 @@ function AcademicModule({
 }
 
 
-function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Student[], meetings: any[], onSaveMeetings: (newMeetings: any[]) => void }) {
+function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Student[], meetings: any[], onSaveMeetings: (newMeetings: any[]) => Promise<void> }) {
   const [isAdding, setIsAdding] = useState(false);
   const [viewingPauta, setViewingPauta] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -2327,7 +2388,7 @@ function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Stud
     pauta: ''
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const dateObj = new Date(formData.date);
     const newMeeting = {
@@ -2336,7 +2397,7 @@ function MeetingsModule({ students, meetings, onSaveMeetings }: { students: Stud
       month: dateObj.toLocaleString('pt-BR', { month: 'short' }).toUpperCase().substring(0, 3),
       day: dateObj.getDate() + 1
     };
-    onSaveMeetings([newMeeting, ...meetings]);
+    await onSaveMeetings([newMeeting, ...meetings]);
     setIsAdding(false);
     setFormData({ date: '', time: '', title: '', responsible: '', pauta: '' });
     toast.success("Reunião agendada com sucesso!");
@@ -2589,7 +2650,7 @@ function OccurrencesModule({
 }: { 
   students: Student[], 
   occurrences: Occurrence[], 
-  onSave: (o: Occurrence[]) => void 
+  onSave: (o: Occurrence[]) => Promise<void> 
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -2603,7 +2664,7 @@ function OccurrencesModule({
     severity: 'low' as const
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const student = students.find(s => s.id === Number(formData.studentId));
     if (!student) {
@@ -2622,7 +2683,7 @@ function OccurrencesModule({
       severity: formData.severity
     };
 
-    onSave([...occurrences, newOccurrence]);
+    await onSave([...occurrences, newOccurrence]);
     setIsAdding(false);
     setFormData({ studentId: '', subject: '', description: '', severity: 'low' });
   };
