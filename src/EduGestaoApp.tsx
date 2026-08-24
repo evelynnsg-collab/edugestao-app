@@ -34,6 +34,44 @@ import autoTable from "jspdf-autotable";
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 
+// --- Helpers ---
+
+/**
+ * Opens a document stored as a base64 data URL by converting it to a Blob URL first.
+ * Navigating directly to a `data:` URL in a new tab is unreliable (many browsers,
+ * Chrome included, block or blank-render large/data-image navigations). Blob URLs
+ * open reliably and also give the file a proper name when downloaded/saved.
+ */
+const openDocument = (fileUrl: string, fileName: string = "documento") => {
+  try {
+    const [header, base64] = fileUrl.split(",");
+    const mimeMatch = header?.match(/data:(.*?);base64/);
+    const mime = mimeMatch?.[1] || "application/octet-stream";
+    const byteChars = atob(base64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mime });
+    const blobUrl = URL.createObjectURL(blob);
+    const opened = window.open(blobUrl, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      // Popup blocked — fall back to a forced download so the user still gets the file
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  } catch (err) {
+    console.error(err);
+    toast.error("Não foi possível abrir o arquivo.");
+  }
+};
+
 // --- Types ---
 
 
@@ -947,14 +985,13 @@ function StudentsModule({ students, onSave }: { students: Student[], onSave: (s:
                               {doc.status === 'verified' ? 'Verificado' : 'Em Análise'}
                             </span>
                             {doc.fileUrl ? (
-                              <a 
-                                href={doc.fileUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
+                              <button
+                                type="button"
+                                onClick={() => openDocument(doc.fileUrl!, doc.name)}
                                 className="text-[#1a2f4e] text-xs font-bold hover:underline"
                               >
                                 Ver arquivo
-                              </a>
+                              </button>
                             ) : (
                               <button className="text-gray-400 text-xs font-bold cursor-not-allowed">Sem arquivo</button>
                             )}
@@ -1276,9 +1313,9 @@ function EmployeesModule({ employees, onSave }: { employees: Employee[], onSave:
                           <span className="text-sm font-black text-[#0e1a2b] truncate max-w-[150px]">{doc.name}</span>
                         </div>
                         {doc.fileUrl && (
-                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-gray-50 text-[#1a2f4e] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#1a2f4e] hover:text-white transition-all">
+                          <button type="button" onClick={() => openDocument(doc.fileUrl!, doc.name)} className="px-4 py-2 bg-gray-50 text-[#1a2f4e] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#1a2f4e] hover:text-white transition-all">
                             Visualizar
-                          </a>
+                          </button>
                         )}
                       </div>
                     ))
